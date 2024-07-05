@@ -1,0 +1,13 @@
+[package]
+name = "parquet-py"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "parq"
+crate-type = ["cdylib"]
+
+[dependencies]
+parquet = { version = "52.0.0", features = ["json"] }
+pyo3 = "0.22.0"
