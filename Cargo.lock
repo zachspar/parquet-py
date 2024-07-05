@@ -628,10 +628,11 @@ dependencies = [
 
 [[package]]
 name = "parquet-py"
-version = "0.0.1-alpha"
+version = "0.0.2-alpha"
 dependencies = [
  "parquet",
  "pyo3",
+ "serde_json",
 ]
 
 [[package]]
