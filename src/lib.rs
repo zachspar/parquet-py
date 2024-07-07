@@ -2,6 +2,8 @@ use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList, PyBool};
 use parquet::file::reader::{FileReader, SerializedFileReader};
 use std::{fs::File, path::Path};
+use parquet::record::Row;
+use pyo3::exceptions::PyStopIteration;
 use serde_json::Value;
 
 struct PyValue(Value);
@@ -74,6 +76,48 @@ fn to_json_str(path: &str) -> PyResult<String> {
     }
 }
 
+#[pyclass]
+struct ParquetRowIterator {
+    // FIXME: This should be a RowIter instead
+    iter: std::vec::IntoIter<Row>
+}
+
+#[pymethods]
+impl ParquetRowIterator {
+    #[new]
+    fn new(path: &str) -> PyResult<Self> {
+        let file_path = Path::new(path);
+        let file = File::open(&file_path).map_err(|e| pyo3::exceptions::PyIOError::new_err(e.to_string()))?;
+        let reader = SerializedFileReader::new(file).map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+
+        // FIXME: This should be a RowIter instead of rendering vec and then providing an iterator!!!
+        Ok(Self { iter: reader.get_row_iter(None).unwrap().map(|r| r.unwrap()).collect::<Vec<_>>().into_iter()})
+    }
+
+    fn __iter__(slf: PyRef<Self>) -> PyRef<Self> {
+        slf
+    }
+
+    fn __next__(mut slf: PyRefMut<Self>) -> PyResult<PyObject> {
+        let row = slf.iter.next().ok_or_else(|| PyErr::new::<PyStopIteration, _>("End of iterator"))?;
+        let row_dict = row.to_json_value();
+        let dict = PyDict::new_bound(slf.py());
+        for (key, value) in row_dict.as_object().unwrap() {
+            dict.set_item(key, PyValue(value.clone()))?;
+        }
+        Ok(dict.into())
+    }
+}
+
+#[pyfunction]
+fn to_iter(path: &str) -> PyResult<ParquetRowIterator> {
+    let file_path = Path::new(path);
+    let file = File::open(&file_path).map_err(|e| pyo3::exceptions::PyIOError::new_err(e.to_string()))?;
+    let reader = SerializedFileReader::new(file).map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+
+    Ok(ParquetRowIterator { iter: reader.get_row_iter(None).unwrap().map(|r| r.unwrap()).collect::<Vec<_>>().into_iter()})
+}
+
 #[pyfunction]
 fn to_list(path: &str, py: Python) -> PyResult<PyObject> {
     let file_path = Path::new(path);
@@ -101,5 +145,7 @@ fn to_list(path: &str, py: Python) -> PyResult<PyObject> {
 fn parq(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(to_json_str, m)?)?;
     m.add_function(wrap_pyfunction!(to_list, m)?)?;
+    m.add_function(wrap_pyfunction!(to_iter, m)?)?;
+    m.add_class::<ParquetRowIterator>()?;
     Ok(())
 }
