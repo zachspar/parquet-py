@@ -142,7 +142,7 @@ fn to_list(path: &str, py: Python) -> PyResult<PyObject> {
 
 // python module
 #[pymodule]
-fn parq(m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn lib(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(to_json_str, m)?)?;
     m.add_function(wrap_pyfunction!(to_list, m)?)?;
     m.add_function(wrap_pyfunction!(to_iter, m)?)?;

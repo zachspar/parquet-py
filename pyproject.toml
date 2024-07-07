@@ -10,6 +10,14 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
+dependencies = [
+    "click==8.1.7",
+]
 dynamic = ["version"]
+
+[project.scripts]
+"parq" = "parq.cli:__main__.parq_cli"
+
 [tool.maturin]
 features = ["pyo3/extension-module"]
+module-name = "parq.lib"
