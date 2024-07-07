@@ -2,6 +2,8 @@
 
 Parquet-Py is a simple Python API & CLI designed to facilitate the interaction with Parquet files. It allows users to convert Parquet files into JSON strings, lists, or iterators for easy manipulation and access in Python applications.
 
+Using Rust bindings under the hood, Parquet-Py provides a fast and efficient way to work with Parquet files, making it ideal for processing large datasets.
+
 ## Features
 
 - **Convert Parquet to JSON String**: Easily convert your Parquet files into a JSON string format for quick inspection or processing.
