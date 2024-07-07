@@ -1,6 +1,7 @@
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList, PyBool};
 use parquet::file::reader::{FileReader, SerializedFileReader};
+use parquet::record::Row;
 use std::{fs::File, path::Path};
 use serde_json::Value;
 
@@ -74,6 +75,49 @@ fn to_json_str(path: &str) -> PyResult<String> {
     }
 }
 
+#[pyclass]
+struct ParquetRowIterator {
+    iter: Box<dyn Iterator<Item = PyResult<PyObject>> + Send>,
+}
+
+#[pymethods]
+impl ParquetRowIterator {
+    fn __iter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
+        slf
+    }
+
+    fn __next__(mut slf: PyRefMut<'_, Self>) -> Option<PyResult<PyObject>> {
+        slf.iter.next()
+    }
+}
+
+// Separate function to create a ParquetRowIterator instance
+fn create_parquet_row_iterator(path: String, py: Python) -> PyResult<ParquetRowIterator> {
+    let file = File::open(Path::new(&path)).map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(format!("{}", e)))?;
+    let reader = SerializedFileReader::new(file).map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("{}", e)))?;
+    let row_iter = reader.get_row_iter(None).map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("{}", e)))?;
+    let iter = Box::new(row_iter.map(|row_result| {
+        row_result
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("{}", e)))
+            .and_then(|row| row_to_py_dict(Python::acquire_gil().python(), &row))
+    }));
+    Ok(ParquetRowIterator { iter })
+}
+
+#[pyfunction]
+fn to_iter(path: &str, py: Python) -> PyResult<PyObject> {
+    let iterator = create_parquet_row_iterator(path.to_string(), py)?;
+    let iterator_obj = Py::new(py, iterator)?;
+    Ok(iterator_obj.to_object(py))
+}
+
+// Remember to add the to_iter function to your module
+#[pymodule]
+fn parq(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    m.add_function(wrap_pyfunction!(to_iter, m)?)?;
+    Ok(())
+}
+
 #[pyfunction]
 fn to_list(path: &str, py: Python) -> PyResult<PyObject> {
     let file_path = Path::new(path);
@@ -101,5 +145,6 @@ fn to_list(path: &str, py: Python) -> PyResult<PyObject> {
 fn parq(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(to_json_str, m)?)?;
     m.add_function(wrap_pyfunction!(to_list, m)?)?;
+    m.add_function(wrap_pyfunction!(to_iter, m)?)?;
     Ok(())
 }
