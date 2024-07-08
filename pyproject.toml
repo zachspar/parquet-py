@@ -11,7 +11,7 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dependencies = [
-    "click==8.1.7",
+    "click>=7.0.0",
 ]
 dynamic = ["version"]
 
