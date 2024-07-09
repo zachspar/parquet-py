@@ -1,3 +1,5 @@
+[![PyPI version](https://badge.fury.io/py/parquet-py.svg)](https://badge.fury.io/py/parquet-py)
+
 # Parquet-Py
 
 Parquet-Py is a simple Python API & CLI designed to facilitate the interaction with Parquet files. It allows users to convert Parquet files into JSON strings, lists, or iterators for easy manipulation and access in Python applications.
