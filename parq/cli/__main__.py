@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import click
-from parq import to_json_str
+from parq import to_json_str, to_csv_str
 
 
 @click.group()
@@ -19,6 +19,7 @@ def parq_cli():
     type=click.Choice(
         [
             "json",
+            "csv",
         ],
         case_sensitive=False,
     ),
@@ -28,12 +29,17 @@ def parq_cli():
 @click.option("--output", "-o", "output_file_path", help="Output file", type=click.Path(), required=False)
 def convert(parquet_file_path, output_format, output_file_path):
     if output_format == "json":
-        json_str = to_json_str(str(parquet_file_path))
-        if output_file_path:
-            with open(output_file_path, "w") as f:
-                f.write(json_str)
-        else:
-            click.echo(json_str)
+        output_string = to_json_str(str(parquet_file_path))
+    elif output_format == "csv":
+        output_string = to_csv_str(str(parquet_file_path))
+    else:
+        raise ValueError(f"Unsupported output format {output_format}")
+
+    if output_file_path:
+        with open(output_file_path, "w") as f:
+            f.write(output_string)
+    else:
+        click.echo(output_string)
 
 
 if __name__ == "__main__":

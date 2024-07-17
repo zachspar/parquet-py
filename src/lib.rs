@@ -1,6 +1,6 @@
 use parquet::file::reader::{FileReader, SerializedFileReader};
 use parquet::record::reader::RowIter;
-use pyo3::exceptions::PyStopIteration;
+use pyo3::exceptions::{PyIOError, PyStopIteration, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyBool, PyDict, PyList};
 use serde_json::Value;
@@ -51,14 +51,46 @@ fn value_to_py_object(py: Python, value: &Value) -> PyResult<PyObject> {
     }
 }
 
-// convert parquet file to json string
+/// to_csv_str(path: str) -> str
+/// --
+///
+/// Read parquet file and convert to csv string.
+#[pyfunction]
+fn to_csv_str(path: &str) -> PyResult<String> {
+    let file_path = Path::new(path);
+    let file = File::open(&file_path).map_err(|e| PyIOError::new_err(e.to_string()))?;
+    let reader = SerializedFileReader::new(file).map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let metadata = reader.metadata();
+    let schema = metadata.file_metadata().schema();
+
+    let mut wtr = csv::Writer::from_writer(vec![]);
+    let fields = schema.get_fields();
+    let headers: Vec<String> = fields.iter().map(|f| f.name().to_string()).collect();
+    wtr.write_record(&headers).map_err(|e| PyValueError::new_err(e.to_string()))?;
+
+    let row_iter = reader.get_row_iter(None).map_err(|e| PyValueError::new_err(e.to_string()))?;
+    for row_result in row_iter {
+        let row = row_result.map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let csv_record: Vec<String> = row.get_column_iter().map(|(_col_idx, col)| col.to_string()).collect();
+        wtr.write_record(&csv_record).map_err(|e| PyValueError::new_err(e.to_string()))?;
+    }
+
+    wtr.flush().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let csv_data = String::from_utf8(wtr.into_inner().map_err(|e| PyValueError::new_err(e.to_string()))?).map_err(|e| PyValueError::new_err(e.to_string()))?;
+    Ok(csv_data)
+}
+
+/// to_json_str(path: str) -> str
+/// --
+///
+/// Read parquet file and convert to JSON string.
 #[pyfunction]
 fn to_json_str(path: &str) -> PyResult<String> {
     let file_path = Path::new(path);
     let file =
-        File::open(&file_path).map_err(|e| pyo3::exceptions::PyIOError::new_err(e.to_string()))?;
+        File::open(&file_path).map_err(|e| PyIOError::new_err(e.to_string()))?;
     let reader = SerializedFileReader::new(file)
-        .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
 
     // iterate through reader and add to json list string
     let mut json_str = "[".to_string();
@@ -74,6 +106,10 @@ fn to_json_str(path: &str) -> PyResult<String> {
     return Ok(json_str);
 }
 
+/// ParquetRowIterator
+/// --
+///
+/// Iterator over rows in parquet file.
 #[pyclass]
 struct ParquetRowIterator {
     iter: RowIter<'static>,
@@ -85,9 +121,9 @@ impl ParquetRowIterator {
     fn new(path: &str) -> PyResult<Self> {
         let file_path = Path::new(path);
         let file = File::open(&file_path)
-            .map_err(|e| pyo3::exceptions::PyIOError::new_err(e.to_string()))?;
+            .map_err(|e| PyIOError::new_err(e.to_string()))?;
         let reader = SerializedFileReader::new(file)
-            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
 
         Ok(Self {
             iter: RowIter::from_file_into(Box::new(reader)),
@@ -112,26 +148,34 @@ impl ParquetRowIterator {
     }
 }
 
+/// to_iter(path: str) -> ParquetRowIterator
+/// --
+///
+/// Return iterator over rows in parquet file.
 #[pyfunction]
 fn to_iter(path: &str) -> PyResult<ParquetRowIterator> {
     let file_path = Path::new(path);
     let file =
-        File::open(&file_path).map_err(|e| pyo3::exceptions::PyIOError::new_err(e.to_string()))?;
+        File::open(&file_path).map_err(|e| PyIOError::new_err(e.to_string()))?;
     let reader = SerializedFileReader::new(file)
-        .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
 
     Ok(ParquetRowIterator {
         iter: RowIter::from_file_into(Box::new(reader)),
     })
 }
 
+/// to_list(path: str) -> List[Dict[str, Any]]
+/// --
+///
+/// Read parquet file and convert to list of dictionaries.
 #[pyfunction]
 fn to_list(path: &str, py: Python) -> PyResult<PyObject> {
     let file_path = Path::new(path);
     let file =
-        File::open(&file_path).map_err(|e| pyo3::exceptions::PyIOError::new_err(e.to_string()))?;
+        File::open(&file_path).map_err(|e| PyIOError::new_err(e.to_string()))?;
     let reader = SerializedFileReader::new(file)
-        .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
     let list = PyList::empty_bound(py);
     for row in reader.get_row_iter(None).unwrap() {
         let row_dict = row.unwrap().to_json_value();
@@ -145,10 +189,11 @@ fn to_list(path: &str, py: Python) -> PyResult<PyObject> {
     Ok(list.into())
 }
 
-// python module
+/// A Parquet file reader and converter, written in Rust.
 #[pymodule]
 fn lib(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(to_json_str, m)?)?;
+    m.add_function(wrap_pyfunction!(to_csv_str, m)?)?;
     m.add_function(wrap_pyfunction!(to_list, m)?)?;
     m.add_function(wrap_pyfunction!(to_iter, m)?)?;
     m.add_class::<ParquetRowIterator>()?;
