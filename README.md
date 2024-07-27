@@ -9,7 +9,7 @@ Using Rust bindings under the hood, Parquet-Py provides a fast and efficient way
 ## Features
 
 - **Convert Parquet to CSV**: Convert your Parquet files into CSV format for easy viewing and processing in spreadsheet applications.
-- **Convert Parquet to JSON**: Easily convert your Parquet files into a JSON string format for quick inspection or processing.
+- **Convert Parquet to JSON / JSON Lines**: Easily convert your Parquet files into a JSON Array or JSON Lines format for quick inspection or processing.
 - **Iterable Parquet Rows**: Access Parquet file rows through an iterator, allowing for efficient row-by-row processing without loading the entire file into memory.
 - **Convert Parquet to Python List**: Transform your Parquet files into Python lists, where each row is represented as a dictionary within the list.
 
@@ -21,6 +21,16 @@ Using Rust bindings under the hood, Parquet-Py provides a fast and efficient way
 ## Usage
 ### Command-Line Interface
 
+> [!WARNING]
+> 
+> The CLI is still under development and may not be fully functional.
+> 
+> Breaking changes may occur in future releases.
+
+> [!TIP]
+> 
+> Multiple input files can be specified with `--input` option. For example, `--input file1.parquet --input file2.parquet`.
+
 #### Converting Parquet to CSV
 
 To convert a Parquet file into a CSV file, use the `parq convert` command.
@@ -29,12 +39,20 @@ To convert a Parquet file into a CSV file, use the `parq convert` command.
 parq convert --input path/to/your/file.parquet --format csv --output example.csv
 ```
 
-#### Converting Parquet to JSON
+#### Converting Parquet to JSON Array
 
-To convert a Parquet file into a JSON string, use the `parq convert` command.
+To convert a Parquet file into a JSON Array, use the `parq convert` command.
 
 ```bash
 parq convert --input path/to/your/file.parquet --format json --output example.json
+```
+
+#### Converting Parquet to JSON Lines
+
+To convert a Parquet file into a JSON Lines, use the `parq convert` command.
+
+```bash
+parq convert --input path/to/your/file.parquet --format jsonl --output example.jsonl
 ```
 
 
