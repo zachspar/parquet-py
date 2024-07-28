@@ -1,7 +1,6 @@
 [package]
 name = "parquet-py"
 version = "0.2.0-beta"
-license = "MIT"
 homepage = "https://github.com/zachspar/parquet-py"
 repository = "https://github.com/zachspar/parquet-py.git"
 readme = "README.md"
