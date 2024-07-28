@@ -1,7 +1,19 @@
 [package]
 name = "parquet-py"
 version = "0.2.0-beta"
+homepage = "https://github.com/zachspar/parquet-py"
+repository = "https://github.com/zachspar/parquet-py.git"
+readme = "README.md"
+license-file = "LICENSE"
+description = "A simple command-line interface & Python API for parquet"
 edition = "2021"
+exclude = [
+    "parq/",
+    ".github/"
+]
+
+[build]
+default = "release"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
