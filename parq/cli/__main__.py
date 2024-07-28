@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 from csv import DictWriter
 from json import dumps
 from io import StringIO
