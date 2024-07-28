@@ -655,7 +655,7 @@ dependencies = [
 
 [[package]]
 name = "parquet-py"
-version = "0.1.0-beta"
+version = "0.2.0-beta"
 dependencies = [
  "csv",
  "parquet",
